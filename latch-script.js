@@ -1,5 +1,5 @@
 // MIDI-Latch script by Felix Gabel
-// Verson 2.0
+// Verson 2.1
 
 var physicalNotesCurrentlyHeldDown = new Set()
 var physicalPedalIsHeldDown = false
@@ -16,19 +16,32 @@ var PluginParameters = [
     }
 ]
 
+function getNoteKey(event) {
+    return event.channel + ":" + event.pitch
+}
+
+function sendNoteOffFromNoteKey(key) {
+    const [channel, pitch] = key.split(':').map(Number)
+    const noteOff = new NoteOff()
+    noteOff.pitch = pitch
+    noteOff.channel = channel
+    noteOff.send()
+}
+
 function HandleMIDI(event) {
     const mode = GetParameter("Latch")
+    const noteKey = getNoteKey(event)
 
     // Note On
     if (event instanceof NoteOn) {
-        if (mode === 0 && !notesCurrentlySustainedWithPedal.has(event.pitch)) { // Remove " && !notesCurrentlySustainedWithPedal.has(event.pitch)" to allow retriggering notes held by the pedal. But I recommend keeping it if you’re using a pad sound, because it usually sounds better that way.
+        if (mode === 0 && !notesCurrentlySustainedWithPedal.has(noteKey)) { // Remove " && !notesCurrentlySustainedWithPedal.has(noteKey)" to allow retriggering notes held by the pedal. But I recommend keeping it if you’re using a pad sound, because it usually sounds better that way.
             event.send()
         }
 
-        physicalNotesCurrentlyHeldDown.add(event.pitch)
+        physicalNotesCurrentlyHeldDown.add(noteKey)
 
         if (physicalPedalIsHeldDown) {
-            notesCurrentlySustainedWithPedal.add(event.pitch)
+            notesCurrentlySustainedWithPedal.add(noteKey)
         }
 
         return
@@ -36,11 +49,11 @@ function HandleMIDI(event) {
 
     // Note Off
     if (event instanceof NoteOff) {
-        if (mode === 0 && (!physicalPedalIsHeldDown || !notesCurrentlySustainedWithPedal.has(event.pitch))) {
+        if (mode === 0 && (!physicalPedalIsHeldDown || !notesCurrentlySustainedWithPedal.has(noteKey))) {
             event.send()
         }
 
-        physicalNotesCurrentlyHeldDown.delete(event.pitch)
+        physicalNotesCurrentlyHeldDown.delete(noteKey)
         
         return
     }
@@ -50,16 +63,14 @@ function HandleMIDI(event) {
         physicalPedalIsHeldDown = event.value >= 64
 
         if (physicalPedalIsHeldDown) {
-            for (const pitch of physicalNotesCurrentlyHeldDown) {
-                notesCurrentlySustainedWithPedal.add(pitch)
+            for (const noteKey of physicalNotesCurrentlyHeldDown) {
+                notesCurrentlySustainedWithPedal.add(noteKey)
             }
         } else {
             if (mode === 0) {
-                for (const pitch of notesCurrentlySustainedWithPedal) {
-                    if (!physicalNotesCurrentlyHeldDown.has(pitch)) {
-                        const noteOff = new NoteOff()
-                        noteOff.pitch = pitch
-                        noteOff.send()
+                for (const noteKey of notesCurrentlySustainedWithPedal) {
+                    if (!physicalNotesCurrentlyHeldDown.has(noteKey)) {
+                        sendNoteOffFromNoteKey(noteKey)
                     }
                 }
             }
@@ -88,11 +99,9 @@ function ParameterChanged(param) {
             notesCurrentlySustainedWithPedal = new Set(currentlyLatchedNotes)
         }
         
-        for (const pitch of currentlyLatchedNotes) {
-            if (!physicalNotesCurrentlyHeldDown.has(pitch) && !notesCurrentlySustainedWithPedal.has(pitch)) {
-                const noteOff = new NoteOff()
-                noteOff.pitch = pitch
-                noteOff.send()
+        for (const noteKey of currentlyLatchedNotes) {
+            if (!physicalNotesCurrentlyHeldDown.has(noteKey) && !notesCurrentlySustainedWithPedal.has(noteKey)) {
+                sendNoteOffFromNoteKey(noteKey)
             }
         }
         
