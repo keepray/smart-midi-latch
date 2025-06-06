@@ -2,7 +2,7 @@
 
 A flexible MIDI latch script for advanced control of note and pedal behavior — especially useful for instruments with non-ending or long-sustaining sounds (e.g., drones, pads, modular synths, or reverb-heavy instruments).
 
-## Key Use Case
+## Use Case
 
 This script is designed for setups where sounds do not naturally decay on their own. It allows you to *"freeze"* sounding notes at the moment you activate latch mode, regardless of whether you're still holding the keys or only the sustain pedal is keeping them alive.
 
