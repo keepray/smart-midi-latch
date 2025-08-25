@@ -1,5 +1,5 @@
 // MIDI-Latch script by Felix Gabel
-// Verson 2.1
+// Verson 2.1.1
 
 var physicalNotesCurrentlyHeldDown = new Set()
 var physicalPedalIsHeldDown = false
